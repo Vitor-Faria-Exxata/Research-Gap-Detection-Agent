@@ -1,0 +1,42 @@
+pipeline:
+  num_queries: 5
+  top_papers: 20
+  papers_per_query_per_source: 50
+  request_timeout_s: 30
+  max_workers: 8
+
+sources:
+  arxiv_enabled: true
+  openalex_enabled: true
+  semantic_scholar_enabled: true
+
+llm:
+  default:
+    provider: nvidia
+    model: deepseek-ai/deepseek-v4-pro
+    temperature: 0.3
+    base_url: https://integrate.api.nvidia.com/v1
+
+  query_rewriter:
+    provider: nvidia
+    model: deepseek-ai/deepseek-v4-pro
+    temperature: 0.7
+    base_url: https://integrate.api.nvidia.com/v1
+
+  paper_extractor:
+    provider: nvidia
+    model: deepseek-ai/deepseek-v4-pro
+    temperature: 0.2
+    base_url: https://integrate.api.nvidia.com/v1
+
+  gap_identifier:
+    provider: nvidia
+    model: deepseek-ai/deepseek-v4-pro
+    temperature: 0.3
+    base_url: https://integrate.api.nvidia.com/v1
+
+  aggregator:
+    provider: nvidia
+    model: deepseek-ai/deepseek-v4-pro
+    temperature: 0.3
+    base_url: https://integrate.api.nvidia.com/v1
