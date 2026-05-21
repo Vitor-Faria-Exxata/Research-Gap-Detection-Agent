@@ -1,19 +1,12 @@
-# Dependencies for the LangGraph-based Research Gap Agent.
-# The original POC's requirements.txt is kept untouched — install both files
-# if you want to run both pipelines from the same environment.
-
-langgraph>=0.2.0
-langchain>=0.3.0
-langchain-core>=0.3.0
-langchain-openai>=0.2.0
-langchain-anthropic>=0.2.0
-langchain-google-genai>=2.0.0
-
-pydantic>=2.5
-pydantic-settings>=2.1
-
-requests>=2.31
-feedparser>=6.0
-
-pyyaml>=6.0
-python-dotenv>=1.0
+langgraph
+langchain
+langchain-core
+langchain-openai
+langchain-anthropic
+langchain-google-genai
+pydantic
+pydantic-settings
+requests
+feedparser
+pyyaml
+python-dotenv
