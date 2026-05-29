@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -30,11 +30,15 @@ class PipelineConfig(BaseModel):
     request_timeout_s: int = 30
     max_workers: int = 8                    # ThreadPool size for the search step
 
+class DocumentConverterConfig(BaseModel):
+    provider_name: Literal['pymupdf', 'marker', 'jina'] = 'pymupdf'
+    use_arxiv_html: bool = True
 
 class YamlConfig(BaseModel):
     pipeline: PipelineConfig = Field(default_factory=PipelineConfig)
     sources: SourcesConfig = Field(default_factory=SourcesConfig)
     llm: dict[str, LLMRoleConfig] = Field(default_factory=dict)
+    document_converter: DocumentConverterConfig = Field(default_factory=DocumentConverterConfig)
 
     def llm_for(self, role: str) -> LLMRoleConfig:
         if role in self.llm:

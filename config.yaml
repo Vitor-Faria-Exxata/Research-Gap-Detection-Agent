@@ -5,6 +5,10 @@ pipeline:
   request_timeout_s: 30
   max_workers: 8
 
+document_converter:
+  provider_name: pymupdf
+  use_arxiv_html: true
+
 sources:
   arxiv_enabled: true
   openalex_enabled: true

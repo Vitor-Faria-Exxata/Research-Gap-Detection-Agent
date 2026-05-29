@@ -48,6 +48,16 @@ If you want to use OpenAI / Anthropic / Google / Groq instead, edit
 pipeline role (`query_rewriter`, `paper_extractor`, `gap_identifier`,
 `aggregator`) plus a `default` block used as fallback.
 
+For the reranker step, fill out `JINA_API_KEY`. You can get one for free at https://jina.ai/reranker/.
+You can also fill out `LANGSEARCH_API_KEY`, that serves as a fallback to when you run out of Jina tokens, and provides
+a more generous, daily, limit.
+
+For the document extraction step (PDF to html), pick your provider in `config.yaml`. `pymupdf` is fast and runs locally on CPU, `marker` is a SOTA 
+extractor, but requires GPU processing, `jina` is a middle-ground extractor, and provides a free api-key with generous limits at https://jina.ai/reader/. 
+By default, when extracting papers from Arxiv, the node first tries to extract the HTML version of the paper to
+cut down costs, checking if no errors ocurred in the PDF -> HTML conversion by Arxiv. You can disable this
+with `use_arxiv_html: false` 
+
 ### 3. Run
 
 ```bash
