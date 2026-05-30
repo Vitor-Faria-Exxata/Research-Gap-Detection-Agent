@@ -10,3 +10,4 @@ requests
 feedparser
 pyyaml
 python-dotenv
+pymupdf4llm

@@ -1,0 +1,82 @@
+RHETORICAL_PHRASES = {
+    "our approach",
+    "a novel approach",
+    "the role",
+    "the models",
+    "the model",
+    "the code",
+    "future needs",
+    "future healthcare needs",
+    "interesting research challenges",
+    "our work",
+    "this study",
+    "this paper",
+    "the authors",
+    "results show",
+    "future work",
+    "the findings",
+    "the literature",
+    "research challenges",
+    "novel problem setting",
+    "shared prediction model",
+    "similar test accuracy",
+    "better model privacy",
+    "a federated model",
+    "a revolution",
+    "our method",
+    "proposed method",
+    "proposed approach",
+    "experimental results",
+    "comparative results",
+    "state of the art",
+    "sota performance",
+    "healthcare",
+    "research",
+    "article",
+    "study",
+    "paper",
+    "approach",
+    "framework",
+    "model",
+    "results",
+    "analysis"
+}
+
+BAD_PREFIXES = (
+    "a ",
+    "an ",
+    "the ",
+    "this ",
+    "these ",
+    "those ",
+    "such "
+)
+
+BAD_SUFFIXES = (
+    " approach",
+    " method",
+    " study",
+    " paper",
+    " result",
+    " results",
+    " framework"
+)
+
+GENERIC_SINGLE_WORDS = {
+    "role",
+    "code",
+    "article",
+    "research",
+    "study",
+    "paper",
+    "analysis",
+    "results",
+    "challenge",
+    "challenges",
+    "problem",
+    "problems",
+    "authors",
+    "work",
+    "finding",
+    "findings"
+}

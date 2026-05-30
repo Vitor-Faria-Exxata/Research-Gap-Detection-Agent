@@ -41,11 +41,11 @@ def build_graph():
 
     # Fan out after query_rewriter: text branch and graph branch run in parallel.
     workflow.add_edge("query_rewriter", "search")
-    workflow.add_edge("query_rewriter", "graph_analyzer")
 
     # Text branch.
     workflow.add_edge("search", "ranker")
     workflow.add_edge("ranker", "paper_extractor")
+    workflow.add_edge("paper_extractor", "graph_analyzer") # My section will use the extracted papers as input to the graph analyzer
     workflow.add_edge("paper_extractor", "gap_identifier")
 
     # Fan in: both branches feed into aggregator.
