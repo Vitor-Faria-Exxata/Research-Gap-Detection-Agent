@@ -15,9 +15,9 @@ The original BERTopic + FAISS POC (`build_index.py`, `query_system.py`,
 [topic]
    |
    v
-query_rewriter ---+--> search -> ranker -> paper_extractor -> gap_identifier --+
-                  |                                                            |
-                  +--> graph_analyzer ----------------------------------------> aggregator -> [report]
+query_rewriter ---+--> search -> ranker -> paper_extractor -> insight_extractor -> gap_identifier --+
+                  |                                                                                    |
+                  +--> graph_analyzer ---------------------------------------------------------> aggregator -> [report]
 ```
 
 ## How to run

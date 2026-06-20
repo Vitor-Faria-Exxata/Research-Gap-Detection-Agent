@@ -1,4 +1,5 @@
 import logging
+from dotenv import load_dotenv
 
 from research_gap_agent.schemas import Paper
 from .reranker_base import Reranker
@@ -6,6 +7,7 @@ from .jina_reranker import JinaAPIReranker
 from .langsearch_reranker import LangSearchAPIReranker
 from .cross_encoder_reranker import CrossEncoderReranker
 from .bge_reranker import BGEReranker
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 

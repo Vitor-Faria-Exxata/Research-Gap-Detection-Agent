@@ -22,6 +22,12 @@ def ranker_node(state: GraphState) -> dict:
         top_k
     )
 
-    selected_papers = safe_rerank(state.queries[0], state.raw_papers, top_k, primary, fallback)
+    selected_papers = safe_rerank(
+        state.queries[0].text,
+        state.raw_papers,
+        top_k,
+        primary,
+        fallback,
+    )
 
     return {"ranked_papers": selected_papers}

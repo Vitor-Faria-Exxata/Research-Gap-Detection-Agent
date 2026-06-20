@@ -1,13 +1,16 @@
 from .document_converter import DocumentConverter
 import concurrent
 
+from research_gap_agent.arxiv import wait as arxiv_throttle_wait
+
+
 class ArxivHtmlFallbackConverter(DocumentConverter):
     def __init__(self):
         try:
             import requests
             from bs4 import BeautifulSoup
             import markdownify
-            
+
             # Bind the modules to the class instance
             self.requests = requests
             self.BeautifulSoup = BeautifulSoup
@@ -19,35 +22,45 @@ class ArxivHtmlFallbackConverter(DocumentConverter):
             )
 
     def convert(self, source: str) -> str:
+        # arXiv legacy API rule: ≤ 1 request / 3 s, single connection.
+        arxiv_throttle_wait()
         url = f"https://arxiv.org/html/{source}"
-        
+
         response = self.requests.get(url)
-        
+
         if response.status_code != 200:
             raise ValueError(f"HTML version not available for {source}")
-            
+
         html_content = response.text
-        
+
         if "ltx_ERROR" in html_content or "\\textbf{" in html_content:
             raise ValueError(f"Heavy conversion errors detected in HTML for {source}")
-            
+
         soup = self.BeautifulSoup(html_content, "html.parser")
-        article_body = soup.find('div', class_='ltx_page_content')# or soup.find("article") or soup.find("body")
-        
+        article_body = soup.find('div', class_='ltx_page_content')
+
         if not article_body:
             raise ValueError("Could not locate the main article body in the HTML.")
-            
+
         markdown_text = self.markdownify.markdownify(
             str(article_body),
             heading_style="ATX",
             strip=['script', 'style']
         )
-        
+
         return markdown_text.strip()
 
+    def _safe_convert(self, source: str) -> str | None:
+        try:
+            return self.convert(source)
+        except Exception:
+            return None
+
     def convert_batch(self, sources: list[str]) -> list[str]:
+        """Fetch HTML versions serially.
+
+        Concurrent fetches would violate arXiv's "single connection at a
+        time" rule. The shared throttle inside `convert()` already spaces
+        requests ≥ 6 s apart, so the loop is just sequential.
         """
-        Fetches HTML versions concurrently.
-        """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            return list(executor.map(self._safe_convert, sources))
+        return [self._safe_convert(s) for s in sources]
