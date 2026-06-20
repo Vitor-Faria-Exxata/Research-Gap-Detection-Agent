@@ -16,12 +16,13 @@ from .cache import (
     MetadataCache,
     clear_all,
 )
-from .throttle import ARXIV_MIN_INTERVAL_S, reset_for_tests, wait
+from .throttle import ARXIV_MIN_INTERVAL_S, extend, reset_for_tests, wait
 
 
 __all__ = [
     "ARXIV_MIN_INTERVAL_S",
     "wait",
+    "extend",
     "reset_for_tests",
     "FullTextCache",
     "MetadataCache",

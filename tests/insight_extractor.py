@@ -1,7 +1,7 @@
 import logging
 from research_gap_agent.nodes.paper_extractor import paper_extractor_node
 from research_gap_agent.nodes.insight_extractor import insight_extractor_node
-from .mock_papers import MOCK_PAPERS
+from mock_papers import MOCK_PAPERS
 
 logging.basicConfig(level=logging.INFO)
 

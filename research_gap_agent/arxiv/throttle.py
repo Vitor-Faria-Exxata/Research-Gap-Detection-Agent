@@ -12,12 +12,11 @@ go through `wait()`. Sharing a single module-level lock means we can't
 accidentally fan out across processes / threads and trip the "single
 connection" rule.
 
-The interval is 6 s (double the published minimum) for a safety margin
-since the per-IP sliding window is stricter in practice than the docs
-suggest.
+The interval is 10 s (3× the published minimum)
 """
 
 import logging
+import random
 import threading
 import time
 
@@ -25,30 +24,43 @@ import time
 logger = logging.getLogger(__name__)
 
 
-# Published minimum is 3 s; we use 6 s for headroom.
-ARXIV_MIN_INTERVAL_S = 6.0
+ARXIV_MIN_INTERVAL_S = 10.0
+_JITTER_MAX_S = 2.0
 
 
 _lock = threading.Lock()
-_last_call_monotonic: float = 0.0
+_next_allowed_monotonic: float = 0.0
 
 
 def wait() -> None:
     """Block until the next arXiv call is allowed under the policy.
 
-    Thread-safe. Holds the lock for the duration of the sleep, so even if
-    many threads call this at once they leave one-at-a-time.
+    Thread-safe. Holds the lock for the duration of the sleep so that even
+    if many threads call this at once they drain one-at-a-time and each
+    gets its own slot separated by ARXIV_MIN_INTERVAL_S.
     """
-    global _last_call_monotonic
+    global _next_allowed_monotonic
     with _lock:
-        elapsed = time.monotonic() - _last_call_monotonic
-        if elapsed < ARXIV_MIN_INTERVAL_S:
-            time.sleep(ARXIV_MIN_INTERVAL_S - elapsed)
-        _last_call_monotonic = time.monotonic()
+        now = time.monotonic()
+        delay = _next_allowed_monotonic - now
+        if delay > 0:
+            time.sleep(delay)
+        jitter = random.uniform(0, _JITTER_MAX_S)
+        _next_allowed_monotonic = time.monotonic() + ARXIV_MIN_INTERVAL_S + jitter
+
+
+def extend(extra_seconds: float) -> None:
+    global _next_allowed_monotonic
+    with _lock:
+        _next_allowed_monotonic = max(
+            _next_allowed_monotonic,
+            time.monotonic() + extra_seconds,
+        )
+    logger.debug("arXiv throttle extended by %.1fs", extra_seconds)
 
 
 def reset_for_tests() -> None:
     """Reset the throttle. Tests only."""
-    global _last_call_monotonic
+    global _next_allowed_monotonic
     with _lock:
-        _last_call_monotonic = 0.0
+        _next_allowed_monotonic = 0.0

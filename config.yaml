@@ -5,7 +5,7 @@ pipeline:
   request_timeout_s: 60
   max_workers: 8
   llm_max_concurrency: 2
-  use_graph_analyzer: true
+  use_graph_analyzer: false
 
 document_converter:
   provider_name: pymupdf

@@ -1,6 +1,6 @@
 """Verify the arXiv throttle serializes requests across all entry points.
 
-arXiv policy: ≤ 1 request / 3 s, single connection. We use 6 s internally
+arXiv policy: ≤ 1 request / 3 s, single connection. We use 10 s internally
 for headroom. This test mocks every arXiv-touching path and asserts that
 N requests, fired from N threads using different entry points, never
 overlap and never go faster than the configured interval.
@@ -37,7 +37,7 @@ def test_throttle_serializes_within_a_module():
     for t in threads: t.join()
     elapsed = time.monotonic() - t0
 
-    # 4 calls * 6 s minimum gap = 18 s minimum total
+    # 4 calls * ARXIV_MIN_INTERVAL_S minimum gap = 3 * interval minimum total
     assert elapsed >= 3 * ARXIV_MIN_INTERVAL_S, f"too fast: {elapsed:.2f}s"
     # Successive timestamps must be spaced at least the throttle interval
     timestamps.sort()
@@ -86,7 +86,7 @@ def test_throttle_serializes_across_modules():
     for t in threads: t.join()
     elapsed = time.monotonic() - t0
 
-    # 5 calls * 6 s gap = 24 s minimum
+    # 5 calls * interval gap = 4 * interval minimum total
     assert elapsed >= 4 * ARXIV_MIN_INTERVAL_S, f"too fast: {elapsed:.2f}s"
 
     # No two calls should overlap (start[i+1] >= end[i])

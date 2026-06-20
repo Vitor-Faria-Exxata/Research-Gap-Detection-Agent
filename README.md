@@ -1,119 +1,97 @@
-# Research Gap Detection Agent
+# Research Gap Agent
 
-Sistema para identificação automática de lacunas de pesquisa a partir de artigos científicos, utilizando:
+LangGraph pipeline that takes a research topic in natural language and tries
+to find open research questions about it. It searches arXiv, OpenAlex, and
+Semantic Scholar (open-access papers only), extracts insights from each
+paper with an LLM, builds a citation/co-occurrence graph in parallel, and
+finally combines both signals into a report.
 
-- Modelagem de tópicos (BERTopic)
-- Embeddings semânticos
-- Grafos de coocorrência
-- Busca vetorial (FAISS)
-- Avaliação com LLM
+## Pipeline
 
-## Dataset
-
-Utiliza o dataset do ArXiv:
-
-👉 https://www.kaggle.com/datasets/Cornell-University/arxiv?resource=download
-
-### Estrutura esperada
-
-Coloque o arquivo em:
-
-- data/arxiv.json
-
-## ⚙️ Instalação
-
-### 1. Criar ambiente virtual
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
+```
+[topic]
+   |
+   v
+query_rewriter ---+--> search -> ranker -> paper_extractor -> insight_extractor -> gap_identifier --+
+                  |                                                                                    |
+                  +--> graph_analyzer ---------------------------------------------------------> aggregator -> [report]
 ```
 
-### 2. Instalar dependências
+## How to run
+
+### 1. Install
 
 ```bash
+python -m venv venv
+source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-## Como executar
+### 2. Configure
 
-O sistema é dividido em duas etapas:
-
-## 1. Build do índice (offline)
-
-Processa os artigos e constrói:
-
-- embeddings  
-- índice FAISS  
-- modelo de tópicos  
-- grafo de pesquisa  
-- lacunas candidatas  
+Copy the env template and fill in at least one API key:
 
 ```bash
-python build_index.py
+cp .env.example .env
 ```
 
-## Saídas geradas:
+The default `config.yaml` uses NVIDIA for every LLM step, so the only
+key you really need is `NVIDIA_API_KEY`. You can get one for free at
+https://build.nvidia.com.
+
+If you want to use OpenAI / Anthropic / Google / Groq instead, edit
+`config.yaml` and put the matching key in `.env`. There is one block per
+pipeline role (`query_rewriter`, `paper_extractor`, `gap_identifier`,
+`aggregator`) plus a `default` block used as fallback.
+
+For the reranker step, pick your provider in `config.yaml`:
+
+| Provider | Type | Setup |
+|---|---|---|
+| `jina` (default) | API | Set `JINA_API_KEY` in `.env` — free tier at https://jina.ai/reranker/ |
+| `langsearch` | API | Set `LANGSEARCH_API_KEY` in `.env` — generous daily free limit |
+| `cross-encoder` | Local CPU | No API key needed — downloads `cross-encoder/ms-marco-MiniLM-L-6-v2` (~80 MB) on first use |
+| `bge` | Local GPU | No API key needed — downloads `BAAI/bge-reranker-v2-m3` (~2.3 GB) on first use. Falls back to CPU if no GPU available. Requires `pip install FlagEmbedding` |
+
+You can also configure a fallback provider in case the primary fails:
+
+```yaml
+# config.yaml
+reranker:
+  provider_name: jina
+  fallback: langsearch
+```
+
+The local rerankers require `sentence-transformers` (already in `requirements.txt`).
+The GPU reranker also requires `FlagEmbedding` (added to `requirements.txt`).
+
+For the document extraction step (PDF to markdown), pick your provider in `config.yaml`.
+`pymupdf` is fast and runs locally on CPU, `marker` is a SOTA extractor but requires GPU,
+`jina` is a middle-ground option with a free API key at https://jina.ai/reader/.
+
+By default, when extracting arXiv papers the node first tries to fetch the HTML version
+of the paper to cut down costs and avoid the PDF download quota. You can disable this
+with `use_arxiv_html: false` in `config.yaml`.
+
+### 3. Run
 
 ```bash
-artifacts/
-├── faiss.index
-├── embeddings.npy
-├── mapping.json
-├── gaps.json
-├── config.json
-└── research_graph.gexf
+python -m research_gap_agent "Self-supervised learning for medical imaging"
 ```
 
----
-
-## 2.Consulta e análise (online)
-
-Avalia as lacunas com LLM e gera relatório:
+Useful flags:
 
 ```bash
-python query_system.py
+# verbose logs (per-source results, dedup stats, etc.)
+python -m research_gap_agent -v "your topic"
+
+# very verbose (debug-level)
+python -m research_gap_agent -vv "your topic"
+
+# write the report to a file instead of stdout
+python -m research_gap_agent "your topic" --output report.md
+
+# JSON output (good for piping into other tools)
+python -m research_gap_agent --json "your topic" > report.json
 ```
-
-## 3. Visualização
-
-Abra o grafo no Gephi:
-
-artifacts/research_graph.gexf
-
-## Como funciona
-
-1. Modelagem de tópicos
-
-Usa BERTopic para extrair tópicos e palavras-chave.
-
-2. Construção de grafo
-
-Nós = conceitos
-Arestas = coocorrência
-Pesos = frequência
-
-3. Identificação de lacunas
-
-Uma lacuna é definida como:
-
-combinação de conceitos relevantes que não aparecem juntos, mas estão em regiões densas do grafo
-
-4. Ranking de lacunas
-
-Baseado em:
-
-centralidade no grafo
-frequência dos conceitos
-
-5. Validação
-
-Busca vetorial (FAISS) para verificar ausência semântica.
-
-6. Avaliação
-
-LLM analisa:
-
-viabilidade
-impacto
-risco

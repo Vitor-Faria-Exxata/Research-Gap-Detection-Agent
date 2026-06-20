@@ -6,10 +6,6 @@ Pipeline shape:
                                                                     |                                          |
                                                                     +-> graph_analyzer ───────────────────────┴─> aggregator -> END
 
-`stop_after` lets a caller terminate the graph after a given node — useful
-while downstream nodes are still TODO. When stopped, the graph_analyzer
-branch and the aggregator are dropped so the graph terminates cleanly.
-
 The `graph_analyzer` branch sources from `paper_extractor` (not from
 `query_rewriter`) because it consumes the extracted papers. The
 `graph_analyzer -> aggregator` edge guarantees aggregator waits for the
@@ -29,7 +25,6 @@ from research_gap_agent.config import load_settings
 from research_gap_agent.nodes import (
     aggregator_node,
     gap_identifier_node,
-    graph_analyzer_node,
     insight_extractor_node,
     paper_extractor_node,
     query_rewriter_node,
@@ -42,8 +37,6 @@ from research_gap_agent.state import GraphState
 logger = logging.getLogger(__name__)
 
 
-# Ordered list of nodes on the text branch. The order here IS the pipeline
-# order; everything else in this file follows from it.
 TEXT_CHAIN = [
     "query_rewriter",
     "search",
@@ -54,9 +47,6 @@ TEXT_CHAIN = [
     "aggregator",
 ]
 
-# Core nodes that are always available. graph_analyzer is added below
-# only if the toggle is on AND the optional import in `nodes/__init__.py`
-# succeeded.
 _CORE_NODES = {
     "query_rewriter": query_rewriter_node,
     "search": search_node,
@@ -90,6 +80,7 @@ def build_graph(stop_after: Optional[str] = None, use_graph_analyzer: Optional[b
 
     nodes = dict(_CORE_NODES)
     if use_graph_analyzer:
+        from research_gap_agent.nodes import graph_analyzer_node
         if graph_analyzer_node is not None:
             nodes["graph_analyzer"] = graph_analyzer_node
         else:

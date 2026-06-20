@@ -2,7 +2,7 @@ import logging
 from unittest.mock import patch, MagicMock
 from research_gap_agent.nodes.ranker import ranker_node
 from research_gap_agent.schemas import SearchQuery
-from .mock_papers import MOCK_PAPERS
+from mock_papers import MOCK_PAPERS
 
 logging.basicConfig(level=logging.INFO)
 

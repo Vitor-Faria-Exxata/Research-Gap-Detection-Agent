@@ -82,8 +82,6 @@ MOCK_PAPERS = [
 ]
 
 
-# ── Helpers de validação ──────────────────────────────────────────────────────
-
 def _check_graph_insight(insight) -> list[str]:
     issues = []
 
@@ -111,8 +109,6 @@ def _check_graph_insight(insight) -> list[str]:
 
     return issues
 
-
-# ── Teste principal ───────────────────────────────────────────────────────────
 
 def run_graph_analyzer_test():
     state = GraphState(
@@ -158,8 +154,6 @@ def run_graph_analyzer_test():
     print("\n" + "=" * 60)
 
 
-# ── Teste com estado vazio ────────────────────────────────────────────────────
-
 def run_empty_state_test():
     state = GraphState(
         initial_topic="federated learning medical imaging",
@@ -176,9 +170,7 @@ def run_empty_state_test():
     assert insight.raw.get("stub") is True, "Estado vazio deveria retornar stub"
     print("  OK — retornou placeholder corretamente para estado vazio")
     print("=" * 60)
-    
-    
-# Adicione essa função no teste e chame antes do run_graph_analyzer_test()
+
 
 def run_debug_test():
     from research_gap_agent.graph_analyzer.extraction.concept_extractor import extract_entities
@@ -191,7 +183,6 @@ def run_debug_test():
     print("DEBUG — EXTRAÇÃO DE ENTIDADES")
     print("=" * 60)
 
-    # ── salience sem filtro ainda ─────────────────────────────────────────────
     papers_entities_raw = [
         [e["text"] for e in extract_entities(t)]
         for t in texts
@@ -200,7 +191,6 @@ def run_debug_test():
     for i, ents in enumerate(papers_entities_raw):
         print(f"  paper_{i+1:03d}: {len(ents)} entidades → {ents[:5]}")
 
-    # ── salience fitado ───────────────────────────────────────────────────────
     salience_filter = ScientificSalienceFilter()
     salience_filter.fit(papers_entities_raw)
 
@@ -209,7 +199,6 @@ def run_debug_test():
         ents = extract_entities(text, salience_filter)
         print(f"  paper_{i+1:03d}: {len(ents)} entidades → {[e['text'] for e in ents[:5]]}")
 
-    # ── relações ──────────────────────────────────────────────────────────────
     print(f"\nRelações extraídas (primeiras 10):")
     count = 0
     for text in texts:

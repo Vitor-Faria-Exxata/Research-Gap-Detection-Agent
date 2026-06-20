@@ -7,7 +7,7 @@ from typing import Optional
 import feedparser
 import requests
 
-from research_gap_agent.arxiv import MetadataCache, wait as arxiv_throttle_wait
+from research_gap_agent.arxiv import MetadataCache, extend as arxiv_throttle_extend, wait as arxiv_throttle_wait
 from research_gap_agent.schemas import Paper
 from research_gap_agent.sources.base import PaperSource
 
@@ -99,9 +99,11 @@ class ArxivSource(PaperSource):
                     wait = _backoff(response, attempt)
                     logger.warning(
                         "arXiv %s for query=%r (attempt %d/%d). "
-                        "Server asked to wait %.1fs.",
+                        "Retrying in %.1fs.",
                         response.status_code, query, attempt, MAX_RETRIES, wait,
                     )
+                    if response.status_code == 429:
+                        arxiv_throttle_extend(wait)
                     time.sleep(wait)
                     continue
                 response.raise_for_status()
