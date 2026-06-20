@@ -1,6 +1,7 @@
 import logging
 from unittest.mock import patch, MagicMock
 from research_gap_agent.nodes.ranker import ranker_node
+from research_gap_agent.schemas import SearchQuery
 from .mock_papers import MOCK_PAPERS
 
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +21,13 @@ def run_realistic_test(mock_load_settings):
     mock_settings.yaml.reranker.fallback = None
     mock_load_settings.return_value = mock_settings
 
-    state = MockState(queries=["Self-supervised learning for medical imaging"], raw_papers=MOCK_PAPERS)
+    state = MockState(
+        queries=[SearchQuery(
+            text="Self-supervised learning for medical imaging",
+            rationale="Test query",
+        )],
+        raw_papers=MOCK_PAPERS,
+    )
 
     print("\n--Starting integration test--")
 

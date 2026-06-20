@@ -20,10 +20,14 @@ class JinaAPIReranker(Reranker):
         self.url = "https://api.jina.ai/v1/rerank"
 
     def rerank(self, query: str, documents: list[Paper], top_k: int) -> list[tuple[Paper, float]]:
+        text_docs = [
+            {"text": f"{doc.title}. {doc.abstract}".strip()}
+            for doc in documents
+        ]
         data = {
             "model": "jina-reranker-v3",
             "query": query,
-            "documents": [doc.model_dump() for doc in documents],
+            "documents": text_docs,
             "top_n": top_k,
         }
 

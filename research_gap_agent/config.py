@@ -29,6 +29,7 @@ class PipelineConfig(BaseModel):
     papers_per_query_per_source: int = 10   # how many papers each source returns per query
     request_timeout_s: int = 30
     max_workers: int = 8                    # ThreadPool size for the search step
+    llm_max_concurrency: int = 2            # ThreadPool size for LLM-driven steps (NVIDIA free tier: 2)
 
 class DocumentConverterConfig(BaseModel):
     provider_name: Literal['pymupdf', 'marker', 'jina'] = 'pymupdf'

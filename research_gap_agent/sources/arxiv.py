@@ -2,12 +2,12 @@ import logging
 import re
 import time
 from datetime import datetime
-from threading import Lock
 from typing import Optional
 
 import feedparser
 import requests
 
+from research_gap_agent.arxiv import MetadataCache, wait as arxiv_throttle_wait
 from research_gap_agent.schemas import Paper
 from research_gap_agent.sources.base import PaperSource
 
@@ -15,22 +15,36 @@ from research_gap_agent.sources.base import PaperSource
 logger = logging.getLogger(__name__)
 
 API_URL = "http://export.arxiv.org/api/query"
-MIN_INTERVAL_S = 3.0
-
-# Module-level rate limiter, shared by all ArxivSource instances. We never
-# want two threads hitting the arXiv API at the same time.
-_last_call_time = 0.0
-_rate_limit_lock = Lock()
-
+MAX_RETRIES = 3
+RETRY_BACKOFF_S = 6.0
+RETRY_AFTER_MAX_S = 60.0
 
 def wait_for_rate_limit():
-    """Block until at least MIN_INTERVAL_S has passed since the last call."""
-    global _last_call_time
-    with _rate_limit_lock:
-        elapsed = time.monotonic() - _last_call_time
-        if elapsed < MIN_INTERVAL_S:
-            time.sleep(MIN_INTERVAL_S - elapsed)
-        _last_call_time = time.monotonic()
+    arxiv_throttle_wait()
+
+
+def _is_retryable_status(status: int) -> bool:
+    return status in (408, 425, 429, 500, 502, 503, 504)
+
+
+def _retry_after_seconds(response) -> Optional[float]:
+    """Parse the Retry-After header (seconds or HTTP date)."""
+    raw = response.headers.get("Retry-After")
+    if not raw:
+        return None
+    try:
+        return max(0.0, min(float(raw), RETRY_AFTER_MAX_S))
+    except ValueError:
+        # HTTP date format — fall back to a conservative default.
+        return None
+
+
+def _backoff(response, attempt: int) -> float:
+    """Prefer the server's Retry-After, fall back to exponential backoff."""
+    retry_after = _retry_after_seconds(response) if response is not None else None
+    if retry_after is not None:
+        return retry_after
+    return RETRY_BACKOFF_S * (2 ** (attempt - 1))
 
 
 def extract_arxiv_id(entry_id: str) -> Optional[str]:
@@ -56,10 +70,18 @@ def clean_whitespace(text: str) -> str:
 class ArxivSource(PaperSource):
     name = "arxiv"
 
-    def __init__(self, timeout_s: int = 30):
+    def __init__(self, timeout_s: int = 60, metadata_cache: Optional[MetadataCache] = None):
         self.timeout_s = timeout_s
+        self.metadata_cache = metadata_cache or MetadataCache()
 
     def search(self, query: str, limit: int) -> list[Paper]:
+        # Query-level cache: if we've already searched this exact query
+        # recently, skip the throttle + the network call entirely.
+        cached = self.metadata_cache.get_fresh(query)
+        if cached is not None:
+            logger.info("arXiv metadata cache hit for query=%r (%d papers)", query, len(cached))
+            return cached[:limit]
+
         params = {
             "search_query": f"all:{query}",
             "start": 0,
@@ -68,12 +90,36 @@ class ArxivSource(PaperSource):
             "sortOrder": "descending",
         }
 
-        wait_for_rate_limit()
-        try:
-            response = requests.get(API_URL, params=params, timeout=self.timeout_s)
-            response.raise_for_status()
-        except requests.RequestException as exc:
-            logger.warning("arXiv request failed for query=%r: %s", query, exc)
+        for attempt in range(1, MAX_RETRIES + 1):
+            arxiv_throttle_wait()
+            response = None
+            try:
+                response = requests.get(API_URL, params=params, timeout=self.timeout_s)
+                if _is_retryable_status(response.status_code) and attempt < MAX_RETRIES:
+                    wait = _backoff(response, attempt)
+                    logger.warning(
+                        "arXiv %s for query=%r (attempt %d/%d). "
+                        "Server asked to wait %.1fs.",
+                        response.status_code, query, attempt, MAX_RETRIES, wait,
+                    )
+                    time.sleep(wait)
+                    continue
+                response.raise_for_status()
+                break
+            except requests.RequestException as exc:
+                if attempt < MAX_RETRIES:
+                    wait = _backoff(response, attempt)
+                    logger.warning(
+                        "arXiv request failed for query=%r (attempt %d/%d): %s. "
+                        "Retrying in %.1fs.",
+                        query, attempt, MAX_RETRIES, exc, wait,
+                    )
+                    time.sleep(wait)
+                    continue
+                logger.warning("arXiv request failed for query=%r: %s", query, exc)
+                return []
+        else:
+            logger.warning("arXiv request exhausted retries for query=%r", query)
             return []
 
         feed = feedparser.parse(response.text)
@@ -82,6 +128,8 @@ class ArxivSource(PaperSource):
             paper = self.entry_to_paper(entry)
             if paper is not None:
                 papers.append(paper)
+
+        self.metadata_cache.put(query, papers)
         return papers
 
     def entry_to_paper(self, entry) -> Optional[Paper]:

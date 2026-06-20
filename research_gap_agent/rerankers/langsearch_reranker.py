@@ -25,11 +25,21 @@ class LangSearchAPIReranker(Reranker):
         data = {
             "model": "langsearch-reranker-v1",
             "query": query,
-            "documents": [doc.model_dump() for doc in docs_to_send],
+            "documents": [doc.model_dump(mode="json") for doc in docs_to_send],
         }
 
         response = requests.post(self.url, headers=self.headers, json=data)
         response.raise_for_status()
-        results = response.json().get("data", [])
+        payload = response.json() or {}
+
+        if not payload.get("success", False):
+            raise RuntimeError(
+                f"LangSearch API error: code={payload.get('code')!r} "
+                f"msg={payload.get('msg')!r}"
+            )
+
+        results = payload.get("data") or []
+        if not results:
+            raise RuntimeError("LangSearch API returned empty data list")
 
         return [(docs_to_send[r["index"]], r["relevance_score"]) for r in results]
