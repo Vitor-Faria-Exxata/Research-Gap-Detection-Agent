@@ -20,3 +20,4 @@ hdbscan
 scikit-learn
 torch
 python-louvain
+FlagEmbedding

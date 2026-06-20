@@ -8,9 +8,9 @@ The state is filled progressively along the pipeline:
     query_rewriter   -> queries
     search           -> raw_papers
     ranker           -> ranked_papers
-    paper_extractor  -> extracted_documents, extracted
+    paper_extractor  -> extracted
     graph_analyzer   -> graph_insight (parallel)
-    gap_identifier   -> gap_identification
+    gap_identifier   -> content_gaps
     aggregator       -> final_report
 """
 
@@ -34,7 +34,6 @@ class GraphState(BaseModel):
     queries: list[SearchQuery] = Field(default_factory=list)
     raw_papers: list[Paper] = Field(default_factory=list)
     ranked_papers: list[Paper] = Field(default_factory=list)
-    extracted_documents: list[Paper] = Field(default_factory=list)
     extracted: list[ExtractedInsights] = Field(default_factory=list)
 
     graph_insight: Optional[GraphInsight] = None

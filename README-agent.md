@@ -20,9 +20,9 @@ The original BERTopic + FAISS POC (`build_index.py`, `query_system.py`,
 [topic]
    |
    v
-query_rewriter ---+--> search -> ranker -> paper_extractor -> gap_identifier --+
-                  |                                                            |
-                  +--> graph_analyzer ----------------------------------------> aggregator -> [report]
+query_rewriter ---+--> search -> ranker -> paper_extractor -> insight_extractor -> gap_identifier --+
+                  |                                                                                    |
+                  +--> graph_analyzer ---------------------------------------------------------> aggregator -> [report]
 ```
 
 ## How to run
@@ -53,9 +53,24 @@ If you want to use OpenAI / Anthropic / Google / Groq instead, edit
 pipeline role (`query_rewriter`, `paper_extractor`, `gap_identifier`,
 `aggregator`) plus a `default` block used as fallback.
 
-For the reranker step, fill out `JINA_API_KEY`. You can get one for free at https://jina.ai/reranker/.
-You can also fill out `LANGSEARCH_API_KEY`, that serves as a fallback to when you run out of Jina tokens, and provides
-a more generous, daily, limit.
+For the reranker step, pick your provider in `config.yaml`:
+
+| Provider | Type | Setup |
+|---|---|---|
+| `jina` (default) | API | Set `JINA_API_KEY` in `.env` — free tier at https://jina.ai/reranker/ |
+| `langsearch` | API | Set `LANGSEARCH_API_KEY` in `.env` — generous daily free limit |
+| `cross-encoder` | Local CPU | No API key needed — downloads `cross-encoder/ms-marco-MiniLM-L-6-v2` (~80 MB) on first use |
+| `bge` | Local GPU | No API key needed — downloads `BAAI/bge-reranker-v2-m3` (~2.3 GB) on first use. Falls back to CPU if no GPU available. Requires `pip install FlagEmbedding` |
+| |
+You can also configure a fallback provider in case the primary fails:
+```yaml
+# config.yaml
+reranker:
+  provider_name: jina
+  fallback: langsearch
+
+The local rerankers require `sentence-transformers` (already in `requirements.txt`).
+The GPU reranker also requires `FlagEmbedding` (added to `requirements.txt`).
 
 For the document extraction step (PDF to html), pick your provider in `config.yaml`. `pymupdf` is fast and runs locally on CPU, `marker` is a SOTA 
 extractor, but requires GPU processing, `jina` is a middle-ground extractor, and provides a free api-key with generous limits at https://jina.ai/reader/. 
