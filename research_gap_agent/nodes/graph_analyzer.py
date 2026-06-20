@@ -3,24 +3,6 @@ Graph analyzer node (owner: Caio).
 """
 
 import logging
-from tqdm import tqdm
-
-from research_gap_agent.graph_analyzer.graph_config import *
-from research_gap_agent.graph_analyzer.extraction.concept_extractor import extract_entities
-from research_gap_agent.graph_analyzer.extraction.relation_extractor import extract_relations
-from research_gap_agent.graph_analyzer.embeddings.embedding_model import embed
-from research_gap_agent.graph_analyzer.graph.graph_builder import build_graph
-from research_gap_agent.graph_analyzer.graph.community_detection import detect_communities
-from research_gap_agent.graph_analyzer.graph.link_prediction import generate_multiconcept_hypotheses
-from research_gap_agent.graph_analyzer.filters.scientific_salience import ScientificSalienceFilter
-from research_gap_agent.graph_analyzer.ranking.hypothesis_ranker import maximal_marginal_relevance_ranking, compute_hypothesis_score
-from research_gap_agent.graph_analyzer.utils.idf import compute_document_frequency
-
-from research_gap_agent.schemas import GraphInsight
-from research_gap_agent.state import GraphState
-
-from research_gap_agent.schemas import GraphInsight
-from research_gap_agent.state import GraphState
 
 from research_gap_agent.schemas import GraphInsight
 from research_gap_agent.state import GraphState
@@ -30,6 +12,37 @@ logger = logging.getLogger(__name__)
 
 def _run_graph_analysis(texts: list[str]) -> GraphInsight:
     """Recebe textos dos papers e retorna um GraphInsight com hipóteses geradas."""
+    from tqdm import tqdm
+
+    from research_gap_agent.graph_analyzer.embeddings.embedding_model import (
+        embed,
+    )
+    from research_gap_agent.graph_analyzer.extraction.concept_extractor import (
+        extract_entities,
+    )
+    from research_gap_agent.graph_analyzer.extraction.relation_extractor import (
+        extract_relations,
+    )
+    from research_gap_agent.graph_analyzer.filters.scientific_salience import (
+        ScientificSalienceFilter,
+    )
+    from research_gap_agent.graph_analyzer.graph.community_detection import (
+        detect_communities,
+    )
+    from research_gap_agent.graph_analyzer.graph.graph_builder import (
+        build_graph,
+    )
+    from research_gap_agent.graph_analyzer.graph.link_prediction import (
+        generate_multiconcept_hypotheses,
+    )
+    from research_gap_agent.graph_analyzer.graph_config import MIN_SIMILARITY
+    from research_gap_agent.graph_analyzer.ranking.hypothesis_ranker import (
+        compute_hypothesis_score,
+        maximal_marginal_relevance_ranking,
+    )
+    from research_gap_agent.graph_analyzer.utils.idf import (
+        compute_document_frequency,
+    )
 
     # ── salience ──────────────────────────────────────────────────────────────
     papers_entities_raw = [
@@ -119,6 +132,18 @@ def _run_graph_analysis(texts: list[str]) -> GraphInsight:
     )
 
 
+def _graph_analysis_stub(reason: str, detail: str) -> GraphInsight:
+    return GraphInsight(
+        summary=reason,
+        disconnected_pairs=[],
+        raw={
+            "stub": True,
+            "reason": reason,
+            "detail": detail,
+        },
+    )
+
+
 def graph_analyzer_node(state: GraphState) -> dict:
     texts = [p.abstract for p in state.ranked_papers if p.abstract]
 
@@ -131,6 +156,23 @@ def graph_analyzer_node(state: GraphState) -> dict:
         )}
 
     logger.info("graph_analyzer_node: analyzing %d abstracts.", len(texts))
-    insight = _run_graph_analysis(texts)
+    try:
+        insight = _run_graph_analysis(texts)
+    except (ImportError, ModuleNotFoundError, OSError) as exc:
+        logger.warning(
+            "graph_analyzer_node: optional graph-analysis dependency is "
+            "unavailable; skipping graph branch. %s",
+            exc,
+        )
+        return {
+            "graph_insight": _graph_analysis_stub(
+                reason=(
+                    "Graph analysis skipped because optional NLP "
+                    "dependencies are unavailable."
+                ),
+                detail=str(exc),
+            )
+        }
+
     logger.info("graph_analyzer_node: done. %s", insight.summary.splitlines()[0])
     return {"graph_insight": insight}

@@ -8,7 +8,7 @@ below so that we get validation for free at every step.
 from datetime import date
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 SourceName = Literal["arxiv", "openalex", "semantic_scholar"]
@@ -52,7 +52,11 @@ class ExtractedInsights(BaseModel):
     questions defined in the project spec.
     """
 
+    model_config = ConfigDict(extra="forbid")
+
     paper_id: str
+    title: str
+    published_date: date
     questions_answered: list[str] = Field(default_factory=list)
     methodologies: list[str] = Field(default_factory=list)
     not_addressed: list[str] = Field(default_factory=list)
@@ -70,18 +74,70 @@ class GraphInsight(BaseModel):
     raw: dict = Field(default_factory=dict)
 
 
+EvidenceType = Literal[
+    "stated_limitations",
+    "recurring_not_addressed",
+    "contrast",
+]
+
+
+class GapWarning(BaseModel):
+    """A stable warning emitted while identifying gaps."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str
+    message: str
+
+
+class CounterEvidence(BaseModel):
+    """Evidence that weakens or qualifies a candidate gap."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    paper_id: str
+    description: str
+
+
+class GapEvidence(BaseModel):
+    """Traceable textual evidence supporting a candidate gap."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    paper_id: str
+    evidence_type: EvidenceType
+    description: str
+
+
 class IdentifiedGap(BaseModel):
     """A candidate research gap built from the extracted insights."""
 
+    model_config = ConfigDict(extra="forbid")
+
+    research_question: str
     description: str
-    supporting_paper_ids: list[str] = Field(default_factory=list)
-    evidence: str
+    evidence_strength: int = Field(..., ge=70, le=100)
+    evidence: list[GapEvidence] = Field(default_factory=list)
+    rationale: str
+    counter_evidence: list[CounterEvidence] = Field(default_factory=list)
+
+
+class GapIdentificationResult(BaseModel):
+    """Complete output of the gap identification stage."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    cutoff_date: date | None
+    warnings: list[GapWarning] = Field(default_factory=list)
+    gaps: list[IdentifiedGap] = Field(default_factory=list)
 
 
 class FinalReport(BaseModel):
     """What the user sees at the end of the pipeline."""
 
     topic: str
+    cutoff_date: date | None
+    warnings: list[GapWarning] = Field(default_factory=list)
     gaps: list[IdentifiedGap]
     summary: str
     methodology_note: str

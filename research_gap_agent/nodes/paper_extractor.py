@@ -1,6 +1,4 @@
-"""
-Paper extractor node (owner: Vinicius).
-"""
+"""Convert ranked papers and initialize the minimum structured contract."""
 
 import logging
 from research_gap_agent.config import load_settings
@@ -78,16 +76,29 @@ def paper_extractor_node(state: GraphState) -> dict:
         for paper, md_text in zip(papers_for_primary, primary_md_results):
             extracted_results[paper.id] = md_text
 
+    extracted_documents = []
     extracted = []
     for paper in papers:
-        if paper.id in extracted_results:
+        markdown = extracted_results.get(paper.id)
+        if isinstance(markdown, str) and markdown:
+            extracted_documents.append(
+                paper.model_copy(update={"full_text": markdown})
+            )
             extracted.append(
-                paper.model_copy(update={'full_text': extracted_results[paper.id]})
+                ExtractedInsights(
+                    paper_id=paper.id,
+                    title=paper.title,
+                    published_date=paper.published_date,
+                )
             )
 
     logger.info(
-        "paper_extractor_node: successfully extracted markdown for %d papers.",
-        len(extracted),
+        "paper_extractor_node: converted %d documents and initialized the "
+        "minimum structured insight contract.",
+        len(extracted_documents),
     )
     
-    return {"extracted": extracted}
+    return {
+        "extracted_documents": extracted_documents,
+        "extracted": extracted,
+    }
