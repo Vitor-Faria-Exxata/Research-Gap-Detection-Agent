@@ -16,3 +16,8 @@ click
 beautifulsoup4
 markdownify
 scispacy
+sentence_transformers
+numpy
+community
+tqdm
+networkx
