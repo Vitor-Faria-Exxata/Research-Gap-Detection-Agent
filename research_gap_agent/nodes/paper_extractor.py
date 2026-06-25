@@ -89,34 +89,20 @@ def paper_extractor_node(state: GraphState) -> dict:
             if paper.arxiv_id and md_text:
                 cache.put(paper.arxiv_id, md_text)
 
-    extracted_documents = []
-    extracted = []
+    updated_papers = []
+    n_with_text = 0
     for paper in papers:
         markdown = extracted_results.get(paper.id)
         if isinstance(markdown, str) and markdown:
-            extracted_documents.append(
-                paper.model_copy(update={"full_text": markdown})
-            )
-            extracted.append(
-                ExtractedInsights(
-                    paper_id=paper.id,
-                    title=paper.title,
-                    published_date=paper.published_date,
-                )
-            )
+            updated_papers.append(paper.model_copy(update={"full_text": markdown}))
+            n_with_text += 1
+        else:
+            updated_papers.append(paper)
 
     logger.info(
-        "paper_extractor_node: converted %d documents and initialized the "
-        "minimum structured insight contract.",
-        len(extracted_documents),
+        "paper_extractor_node: populated full_text for %d / %d papers.",
+        n_with_text,
+        len(papers),
     )
-<<<<<<< HEAD
-    
-    return {
-        "extracted_documents": extracted_documents,
-        "extracted": extracted,
-    }
-=======
 
-    return {"extracted": extracted}
->>>>>>> origin/main
+    return {"ranked_papers": updated_papers}

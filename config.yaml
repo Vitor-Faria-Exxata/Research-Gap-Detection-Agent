@@ -17,7 +17,7 @@ reranker:
 
 sources:
   arxiv_enabled: true
-  openalex_enabled: false
+  openalex_enabled: true
   semantic_scholar_enabled: false
 
 llm:

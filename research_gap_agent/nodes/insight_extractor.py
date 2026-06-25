@@ -61,7 +61,7 @@ def _is_retryable(exc: Exception) -> bool:
 def _extract_for_paper(paper: Paper, llm) -> tuple[str, ExtractedInsights]:
     if not paper.full_text:
         logger.debug("paper %s has no full_text; emitting empty insights.", paper.id)
-        return paper.id, ExtractedInsights(paper_id=paper.id)
+        return paper.id, ExtractedInsights(paper_id=paper.id, title=paper.title, published_date=paper.published_date)
 
     text = paper.full_text
     if len(text) > MAX_TEXT_CHARS:
@@ -100,13 +100,15 @@ def _extract_for_paper(paper: Paper, llm) -> tuple[str, ExtractedInsights]:
 
     if last_exc is not None:
         logger.warning("LLM extraction failed for paper %s: %s", paper.id, last_exc)
-        return paper.id, ExtractedInsights(paper_id=paper.id)
+        return paper.id, ExtractedInsights(paper_id=paper.id, title=paper.title, published_date=paper.published_date)
 
     # `result` is an ExtractedInsights thanks to with_structured_output. We
     # re-construct with paper_id forced to the real paper id so the field is
     # always correct even if the model returned something else.
     return paper.id, ExtractedInsights(
         paper_id=paper.id,
+        title=paper.title,
+        published_date=paper.published_date,
         questions_answered=list(getattr(result, "questions_answered", []) or []),
         methodologies=list(getattr(result, "methodologies", []) or []),
         not_addressed=list(getattr(result, "not_addressed", []) or []),
@@ -120,10 +122,10 @@ def insight_extractor_node(state: GraphState) -> dict:
 
     llm = get_llm("insight_extractor").with_structured_output(ExtractedInsights)
 
-    papers = state.extracted
+    papers = state.ranked_papers
     if not papers:
         logger.warning("insight_extractor_node: no papers to process.")
-        return {"insights": []}
+        return {"extracted": []}
 
     insights_by_id: dict[str, ExtractedInsights] = {}
 
@@ -148,4 +150,4 @@ def insight_extractor_node(state: GraphState) -> dict:
         n_with_text,
         max_workers,
     )
-    return {"insights": insights}
+    return {"extracted": insights}

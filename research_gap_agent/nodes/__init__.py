@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-from importlib import import_module
-=======
 """LangGraph node functions, one per pipeline step.
 
 The graph_analyzer node is the only one that pulls in a heavy optional
@@ -24,7 +21,6 @@ from research_gap_agent.nodes.paper_extractor import paper_extractor_node
 from research_gap_agent.nodes.query_rewriter import query_rewriter_node
 from research_gap_agent.nodes.ranker import ranker_node
 from research_gap_agent.nodes.search import search_node
->>>>>>> origin/main
 
 # Optional: graph_analyzer requires a spacy model that may not be
 # installed in every environment. We log a single warning on failure
